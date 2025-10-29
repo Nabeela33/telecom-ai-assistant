@@ -2,59 +2,65 @@ import streamlit as st
 from utils import load_mapping
 from vertex_client import VertexAgent
 from bigquery_client import BigQueryAgent
+import pandas as pd
+import altair as alt
 
-# ----------------- CONFIG -----------------
+# ---------------- CONFIG ----------------
 PROJECT_ID = "telecom-data-lake"
 REGION = "europe-west2"
-BUCKET_NAME = "stage_data1"
+BUCKET_NAME = "stage_data1/Mapping files"
 
-SIEBEL_MAPPING_FILE = "Mapping files/siebel_mapping.txt"
-ANTILLIA_MAPPING_FILE = "Mapping files/antillia_mapping.txt"
-
-# ----------------- LOAD MAPPINGS -----------------
+# ---------------- LOAD MAPPINGS ----------------
 st.sidebar.title("Configuration")
-st.sidebar.info("Mappings from Siebel & Antillia will help SQL generation.")
+st.sidebar.info("Mappings from different systems guide the SQL generation.")
 
-siebel_mapping = load_mapping(BUCKET_NAME, SIEBEL_MAPPING_FILE)
-antillia_mapping = load_mapping(BUCKET_NAME, ANTILLIA_MAPPING_FILE)
+st.write("Loading mapping files from GCS...")
+siebel_mapping = load_mapping(BUCKET_NAME, "siebel_mapping.txt")
+antillia_mapping = load_mapping(BUCKET_NAME, "antillia_mapping.txt")
 
-# ----------------- INIT AGENTS -----------------
+# ---------------- INIT AGENTS ----------------
 vertex_agent = VertexAgent(PROJECT_ID, REGION)
 bq_agent = BigQueryAgent(PROJECT_ID)
 
-# ----------------- STREAMLIT UI -----------------
+# ---------------- STREAMLIT UI ----------------
 st.title("📊 Telecom Data Query Agent")
-st.markdown("Enter your query in natural language. Gemini 2.5 will convert it to SQL and execute in BigQuery.")
+st.markdown("Hello!! Please enter your query. Gemini will generate SQL and fetch data from BigQuery.")
 
 prompt = st.text_area("Enter your query:")
-
-with st.expander("Preview Mapping Files"):
-    st.subheader("Siebel Mapping")
-    st.dataframe(siebel_mapping.head())
-    st.subheader("Antillia Mapping")
-    st.dataframe(antillia_mapping.head())
 
 if st.button("Run Query"):
     if not prompt.strip():
         st.warning("Please enter a query prompt!")
     else:
         try:
-            with st.spinner("Generating SQL with Gemini 2.5..."):
+            # Generate SQL
+            with st.spinner("🧠 Generating SQL"):
                 sql_query = vertex_agent.prompt_to_sql(prompt, siebel_mapping, antillia_mapping)
+            st.subheader("Generated SQL")
             st.code(sql_query, language="sql")
 
-            with st.spinner("Executing SQL in BigQuery..."):
+            # Execute SQL
+            with st.spinner("🏃 Executing SQL in BigQuery..."):
                 df = bq_agent.execute(sql_query)
-            
-            st.success(f"Query executed successfully! {len(df)} rows returned.")
-            st.dataframe(df)
 
-            # Optional: simple chart if numeric data
+            st.success(f"✅ Query executed successfully! {len(df)} rows returned.")
+            
+            # Collapsible dataframe
+            with st.expander("View Query Results"):
+                st.dataframe(df)
+
+            # Interactive chart
             numeric_cols = df.select_dtypes(include="number").columns.tolist()
             if numeric_cols:
-                st.subheader("Charts")
-                for col in numeric_cols:
-                    st.bar_chart(df[col])
+                st.subheader("📈 Charts")
+                col_to_plot = st.selectbox("Select column to visualize:", numeric_cols)
+
+                chart = alt.Chart(df).mark_bar().encode(
+                    x=alt.X(df.index, title="Row"),
+                    y=alt.Y(col_to_plot, title=col_to_plot)
+                ).interactive()
+
+                st.altair_chart(chart, use_container_width=True)
 
         except Exception as e:
-            st.error(f"Error: {e}")
+            st.error(f"❌ Error: {e}")
