@@ -8,7 +8,7 @@ import re
 # ---------------- CONFIG ----------------
 PROJECT_ID = "telecom-data-lake"
 REGION = "europe-west2"
-BUCKET_NAME = "stage_data1/Mapping files"
+BUCKET_NAME = "stage_data1"
 MAPPING_FOLDER = "Mapping files" 
 
 # ---------------- SIDEBAR ----------------
