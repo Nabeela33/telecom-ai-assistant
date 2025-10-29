@@ -12,9 +12,9 @@ BUCKET_NAME = "stage_data1"
 MAPPING_FOLDER = "Mapping files" 
 
 # ---------------- SIDEBAR ----------------
-st.sidebar.title("⚙️ Configuration")
-st.sidebar.info("Mappings guide SQL generation across systems.")
-st.sidebar.caption("Powered by Gemini 2.5 Flash + BigQuery")
+#st.sidebar.title("⚙️ Configuration")
+#st.sidebar.info("Mappings guide SQL generation across systems.")
+#st.sidebar.caption("Powered by Gemini 2.5 Flash + BigQuery")
 
 # ---------------- INIT ----------------
 vertex_agent = VertexAgent(PROJECT_ID, REGION)
