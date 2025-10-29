@@ -9,6 +9,7 @@ import re
 PROJECT_ID = "telecom-data-lake"
 REGION = "europe-west2"
 BUCKET_NAME = "stage_data1/Mapping files"
+MAPPING_FOLDER = "Mapping files" 
 
 # ---------------- SIDEBAR ----------------
 st.sidebar.title("⚙️ Configuration")
@@ -20,8 +21,8 @@ vertex_agent = VertexAgent(PROJECT_ID, REGION)
 bq_agent = BigQueryAgent(PROJECT_ID)
 
 # Preload mappings silently
-siebel_mapping = load_mapping(BUCKET_NAME, "siebel_mapping.txt")
-antillia_mapping = load_mapping(BUCKET_NAME, "antillia_mapping.txt")
+siebel_mapping = load_mapping(BUCKET_NAME, f"{MAPPING_FOLDER}/siebel_mapping.txt")
+antillia_mapping = load_mapping(BUCKET_NAME, f"{MAPPING_FOLDER}/antillia_mapping.txt")
 
 # ---------------- STREAMLIT STATE ----------------
 if "df" not in st.session_state:
