@@ -8,7 +8,9 @@ from utils import (
 from vertex_client import VertexAgent
 from bigquery_client import BigQueryAgent
 import streamlit as st
+import pandas as pd
 
+# ---------------- CONFIG ----------------
 PROJECT_ID = "telecom-data-lake"
 REGION = "europe-west1"
 BUCKET_NAME = "stage_data1"
@@ -16,6 +18,9 @@ SIEBEL_FILE = "Mapping files/siebel_mapping.txt"
 ANTILLIA_FILE = "Mapping files/antillia_mapping.txt"
 
 # ---------------- LOAD MAPPINGS ----------------
+#st.sidebar.title("⚙️ Configuration")
+#st.sidebar.caption("Gemini-powered dynamic SQL generation using Siebel & Antillia metadata.")
+
 siebel_raw = load_mapping(BUCKET_NAME, SIEBEL_FILE)
 antillia_raw = load_mapping(BUCKET_NAME, ANTILLIA_FILE)
 
@@ -27,14 +32,99 @@ alias_map = generate_aliases(tables)
 vertex_agent = VertexAgent(PROJECT_ID, REGION, tables, tables, column_context, joins, alias_map)
 bq_agent = BigQueryAgent(PROJECT_ID)
 
-st.title("📊 Telecom Data Assistant (Dynamic Context)")
-prompt = st.text_area("💬 Ask a question:")
+# ---------------- STREAMLIT UI ----------------
+st.title("📊 Data Assistant")
+#st.markdown("Ask me anything about your data — I’ll write, run, and explain SQL for you!")
 
-if st.button("🚀 Run Query"):
+# ---------------- SESSION STATE ----------------
+if "df" not in st.session_state:
+    st.session_state.df = None
+if "last_sql" not in st.session_state:
+    st.session_state.last_sql = None
+if "conversation_mode" not in st.session_state:
+    st.session_state.conversation_mode = False
+
+# ---------------- MAIN PROMPT ----------------
+prompt = st.text_area("💬 Ask a question :— I’ll write, run, and explain SQL for you!")
+
+col1, col2 = st.columns([1, 1])
+with col1:
+    run_btn = st.button("🚀 Run Query")
+with col2:
+    if st.session_state.df is not None:
+        follow_btn = st.button("💬 Continue Conversation")
+
+# ---------------- RUN QUERY ----------------
+if run_btn:
     try:
         sql = vertex_agent.prompt_to_sql(prompt)
+        st.session_state.last_sql = sql
         st.code(sql, language="sql")
-        df = bq_agent.execute(sql)
-        st.dataframe(df)
+
+        with st.spinner("📡 Running SQL in BigQuery..."):
+            df = bq_agent.execute(sql)
+            st.session_state.df = df
+
+        st.success(f"✅ Query executed successfully! {len(df)} rows returned.")
+        st.dataframe(df, use_container_width=True)
+
+        # CSV Download
+        csv = df.to_csv(index=False).encode("utf-8")
+        st.download_button(
+            label="📥 Download Results as CSV",
+            data=csv,
+            file_name="query_results.csv",
+            mime="text/csv",
+        )
+
+        st.session_state.conversation_mode = True
+
     except Exception as e:
         st.error(f"❌ Error: {e}")
+
+# ---------------- FOLLOW-UP CONVERSATION ----------------
+if follow_btn and st.session_state.df is not None:
+    st.markdown("---")
+    st.subheader("🧠 Follow-up Question")
+    st.info("You can ask me something related to your previous results!")
+
+    follow_prompt = st.text_area("💬 Continue (e.g., 'show only active accounts' or 'top 5 by charge_amount'):")
+
+    if st.button("▶️ Run Follow-up"):
+        try:
+            context = (
+                f"Previous SQL:\n{st.session_state.last_sql}\n\n"
+                f"Sample Data:\n{st.session_state.df.head(10).to_string(index=False)}"
+            )
+            full_prompt = f"{context}\n\nFollow-up Question:\n{follow_prompt}\n\nGenerate an updated SQL query."
+            sql = vertex_agent.prompt_to_sql(full_prompt)
+            st.session_state.last_sql = sql
+
+            st.code(sql, language="sql")
+
+            with st.spinner("📡 Running refined SQL in BigQuery..."):
+                df = bq_agent.execute(sql)
+                st.session_state.df = df
+
+            st.success(f"✅ Follow-up executed successfully! {len(df)} rows returned.")
+            st.dataframe(df, use_container_width=True)
+
+            csv = df.to_csv(index=False).encode("utf-8")
+            st.download_button(
+                label="📥 Download Updated Results",
+                data=csv,
+                file_name="followup_results.csv",
+                mime="text/csv",
+            )
+
+        except Exception as e:
+            st.error(f"❌ Error: {e}")
+
+# ---------------- DEBUG PANEL ----------------
+with st.expander("🧩 Debug Info (for demo explanation)"):
+    st.markdown("**Detected Tables:**")
+    st.write(tables)
+    st.markdown("**Extracted Joins:**")
+    st.write(joins)
+    st.markdown("**Generated Aliases:**")
+    st.json(alias_map)
