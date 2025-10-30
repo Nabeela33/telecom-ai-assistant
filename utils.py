@@ -1,48 +1,31 @@
 from google.cloud import storage
-import re
 
 def load_mapping(bucket_name: str, file_path: str) -> str:
-    """
-    Load a text file from GCS. `file_path` can include spaces (e.g., 'Mapping files/siebel_mapping.txt').
-    """
+    """Load mapping text file from GCS."""
     try:
         client = storage.Client()
         bucket = client.bucket(bucket_name)
         blob = bucket.blob(file_path)
-        if not blob.exists():
-            raise RuntimeError(f"GCS object not found: gs://{bucket_name}/{file_path}")
         return blob.download_as_text()
     except Exception as e:
         raise RuntimeError(f"Failed to load mapping {file_path}: {e}")
 
-# fully-qualified table: project.dataset.table
-FQ_TABLE_RE = re.compile(r"\b([\w\-]+)\.([\w\-]+)\.([\w\-_]+)\b")
+def extract_mapping_lines(text: str) -> str:
+    """Extract clean dataset references for display."""
+    import re
+    lines = []
+    for line in text.splitlines():
+        match = re.search(r'([\w\-]+\.[\w\-]+\.[\w\-_]+)', line)
+        if match:
+            lines.append(match.group(1))
+    return "\n".join(sorted(set(lines)))
 
-def parse_allowed_tables(mapping_text: str) -> set:
-    """
-    Parse mapping text and return a set of fully-qualified table names found.
-    Accepts lines like:
-      telecom-data-lake.o_siebel.siebel_accounts
-      accounts = telecom-data-lake.o_siebel.siebel_accounts
-    """
-    tables = set()
-
+def extract_column_hints(mapping_text: str) -> str:
+    """Extract column name: description pairs for model context."""
+    lines = []
     for line in mapping_text.splitlines():
-        line = line.strip()
-        if not line or line.startswith("#"):
-            continue
-
-        # key = value form
-        if "=" in line:
-            _, val = line.split("=", 1)
-            m = FQ_TABLE_RE.search(val.strip())
-            if m:
-                tables.add(".".join(m.groups()))
-            continue
-
-        # bare FQ table name in line
-        m = FQ_TABLE_RE.search(line)
-        if m:
-            tables.add(".".join(m.groups()))
-
-    return tables
+        if line.strip().startswith("-") and ":" in line:
+            parts = line.strip("- ").split(":", 1)
+            if len(parts) == 2:
+                lines.append(f"{parts[0].strip()}: {parts[1].strip()}")
+    return "\n".join(lines)
