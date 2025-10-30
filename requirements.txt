@@ -5,3 +5,4 @@ google-cloud-aiplatform==1.70.0
 pandas==2.2.3
 altair==5.4.1
 vertexai
+db-dtypes==1.3.0
