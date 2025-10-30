@@ -9,7 +9,9 @@ import altair as alt
 # ---------------- CONFIG ----------------
 PROJECT_ID = "telecom-data-lake"
 REGION = "europe-west2"
-BUCKET_NAME = "stage_data1/Mapping files"
+BUCKET_NAME = "stage_data1"
+SIEBEL_FILE = "Mapping files/siebel_mapping.txt"
+ANTILLIA_FILE = "Mapping files/antillia_mapping.txt"
 
 # ---------------- SIDEBAR ----------------
 st.sidebar.title("⚙️ Configuration")
@@ -41,8 +43,8 @@ def extract_mapping_lines(text):
 
 # ---------------- LOAD MAPPINGS ----------------
 with st.spinner("📥 Loading mapping files from GCS..."):
-    siebel_raw = load_mapping(BUCKET_NAME, "siebel_mapping.txt")
-    antillia_raw = load_mapping(BUCKET_NAME, "antillia_mapping.txt")
+    siebel_raw = load_mapping(BUCKET_NAME, SIEBEL_FILE)
+    antillia_raw = load_mapping(BUCKET_NAME, ANTILLIA_FILE)
 
 siebel_mapping = extract_mapping_lines(siebel_raw)
 antillia_mapping = extract_mapping_lines(antillia_raw)
