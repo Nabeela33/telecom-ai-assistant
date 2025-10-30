@@ -4,7 +4,7 @@ from typing import Iterable, List, Set
 import vertexai
 from vertexai.generative_models import GenerativeModel, GenerationConfig
 
-SQL_MODEL = "gemini-1.5-flash"  # or gemini-2.0-flash-exp if enabled
+SQL_MODEL = "gemini-2.5-flash"  # or gemini-2.0-flash-exp if enabled #gemini-2.0-flash-lite #gemini-1.5-flash
 
 SELECT_ONLY_PATTERN = re.compile(r"^\s*SELECT\b", re.IGNORECASE | re.DOTALL)
 FQ_TABLE_PATTERN = re.compile(r"([`\"]?[\w\-]+[`\"]?\.[`\"]?[\w\-]+[`\"]?\.[`\"]?[\w\-_]+[`\"]?)")
