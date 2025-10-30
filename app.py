@@ -18,8 +18,8 @@ SIEBEL_FILE = "Mapping files/siebel_mapping.txt"
 ANTILLIA_FILE = "Mapping files/antillia_mapping.txt"
 
 # ---------------- LOAD MAPPINGS ----------------
-#st.sidebar.title("⚙️ Configuration")
-#st.sidebar.caption("Gemini-powered dynamic SQL generation using Siebel & Antillia metadata.")
+st.sidebar.title("⚙️ Configuration")
+st.sidebar.caption("Gemini-powered dynamic SQL generation using Siebel & Antillia metadata.")
 
 siebel_raw = load_mapping(BUCKET_NAME, SIEBEL_FILE)
 antillia_raw = load_mapping(BUCKET_NAME, ANTILLIA_FILE)
@@ -32,11 +32,7 @@ alias_map = generate_aliases(tables)
 vertex_agent = VertexAgent(PROJECT_ID, REGION, tables, tables, column_context, joins, alias_map)
 bq_agent = BigQueryAgent(PROJECT_ID)
 
-# ---------------- STREAMLIT UI ----------------
-st.title("📊 Data Assistant")
-#st.markdown("Ask me anything about your data — I’ll write, run, and explain SQL for you!")
-
-# ---------------- SESSION STATE ----------------
+# ---------------- STREAMLIT STATE ----------------
 if "df" not in st.session_state:
     st.session_state.df = None
 if "last_sql" not in st.session_state:
@@ -44,15 +40,16 @@ if "last_sql" not in st.session_state:
 if "conversation_mode" not in st.session_state:
     st.session_state.conversation_mode = False
 
-# ---------------- MAIN PROMPT ----------------
-prompt = st.text_area("💬 Ask a question :— I’ll write, run, and explain SQL for you!")
+# ---------------- MAIN UI ----------------
+st.title("📊 Telecom Data Assistant (Dynamic Context)")
+st.markdown("Ask me anything about your telecom data — I’ll write, run, and explain SQL for you!")
 
+prompt = st.text_area("💬 Ask a question (e.g., 'Show all active billing products with account details'):")
+
+# --- Buttons ---
 col1, col2 = st.columns([1, 1])
-with col1:
-    run_btn = st.button("🚀 Run Query")
-with col2:
-    if st.session_state.df is not None:
-        follow_btn = st.button("💬 Continue Conversation")
+run_btn = col1.button("🚀 Run Query")
+follow_btn = col2.button("💬 Continue Conversation", disabled=st.session_state.df is None)
 
 # ---------------- RUN QUERY ----------------
 if run_btn:
@@ -85,7 +82,7 @@ if run_btn:
 # ---------------- FOLLOW-UP CONVERSATION ----------------
 if follow_btn and st.session_state.df is not None:
     st.markdown("---")
-    st.subheader("🧠 Follow-up Question")
+    st.subheader("🧠 Follow-up Question Mode")
     st.info("You can ask me something related to your previous results!")
 
     follow_prompt = st.text_area("💬 Continue (e.g., 'show only active accounts' or 'top 5 by charge_amount'):")
