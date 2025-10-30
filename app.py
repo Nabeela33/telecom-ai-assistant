@@ -9,7 +9,7 @@ import re
 # ---------------- CONFIG ----------------
 PROJECT_ID = "telecom-data-lake"
 REGION = "europe-west2"
-BUCKET_NAME = "stage_data1/Mapping files"
+BUCKET_NAME = "stage_data1"
 
 # ---------------- HELPER: Clean mapping text ----------------
 def extract_mapping_lines(text):
@@ -32,8 +32,8 @@ st.sidebar.title("⚙️ Configuration")
 st.sidebar.info("Mappings from Siebel & Antillia guide Gemini SQL generation.")
 
 with st.spinner("📥 Loading mapping files from GCS..."):
-    raw_siebel = load_mapping(BUCKET_NAME, "siebel_mapping.txt")
-    raw_antillia = load_mapping(BUCKET_NAME, "antillia_mapping.txt")
+    raw_siebel = load_mapping(BUCKET_NAME, "Mapping files/siebel_mapping.txt")
+    raw_antillia = load_mapping(BUCKET_NAME, "Mapping files/antillia_mapping.txt")
 
 # Extract only clean mapping pairs
 siebel_mapping = extract_mapping_lines(raw_siebel)
