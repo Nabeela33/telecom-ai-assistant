@@ -11,40 +11,49 @@ def load_mapping(bucket_name: str, file_path: str) -> str:
     except Exception as e:
         raise RuntimeError(f"Failed to load mapping {file_path}: {e}")
 
-
 def extract_mapping_lines(text: str) -> list:
-    """Return all dataset.table paths."""
-    return sorted(set(re.findall(r"([\w\-]+\.[\w\-]+\.[\w\-_]+)", text)))
-
+    """
+    Return dataset paths found in mapping text.
+    Matches: project.dataset.table or dataset.table (with/without backticks).
+    """
+    # capture backticked or plain identifiers with 1 or 2 dots
+    pattern = r"`?([\w\-]+\.[\w\-]+(?:\.[\w\-_]+)?)`?"
+    hits = re.findall(pattern, text)
+    # normalize duplicates and return sorted unique list
+    return sorted(set(hits))
 
 def extract_column_hints(mapping_text: str) -> str:
-    """Extract 'column: description' pairs for model grounding."""
+    """Extract 'column: description' pairs for model grounding (very loose heuristic)."""
     lines = []
     for line in mapping_text.splitlines():
-        if line.strip().startswith("-") and ":" in line:
-            col, desc = line.strip("- ").split(":", 1)
+        line = line.strip()
+        if (line.startswith("-") or line.startswith("*")) and ":" in line:
+            col, desc = line.lstrip("-* ").split(":", 1)
             lines.append(f"{col.strip()}: {desc.strip()}")
     return "\n".join(lines)
 
-
 def extract_join_relationships(mapping_text: str) -> list:
-    """Extract JOIN and ON relationships dynamically."""
+    """Extract JOIN and ON relationships dynamically (case-insensitive heuristic)."""
     joins = []
     for line in mapping_text.splitlines():
-        if "JOIN" in line and "ON" in line:
-            # capture typical pattern: table1.col = table2.col
-            on_parts = re.findall(r"([\w\.`]+\.[\w_]+)\s*=\s*([\w\.`]+\.[\w_]+)", line)
+        if "join" in line.lower() and "on" in line.lower():
+            on_parts = re.findall(r"([\w\.`]+\.[\w_]+)\s*=\s*([\w\.`]+\.[\w_]+)", line, flags=re.IGNORECASE)
             for left, right in on_parts:
                 joins.append(f"{left} = {right}")
     return sorted(set(joins))
 
-
 def generate_aliases(tables: list) -> dict:
-    """Generate short, unique aliases based on last word of table name."""
+    """Generate short, unique aliases based on last part of table name."""
     alias_map = {}
+    seen = set()
     for t in tables:
-        alias = re.sub(r'[^a-zA-Z]', '', t.split(".")[-1])[:4].lower()  # short unique alias
-        if alias in alias_map.values():
-            alias += str(len(alias_map))
+        last = t.split(".")[-1]
+        base = re.sub(r"[^a-zA-Z]", "", last)[:4].lower() or "t"
+        alias = base
+        i = 1
+        while alias in seen:
+            alias = f"{base}{i}"
+            i += 1
         alias_map[t] = alias
+        seen.add(alias)
     return alias_map
