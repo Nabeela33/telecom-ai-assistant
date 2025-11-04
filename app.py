@@ -78,7 +78,7 @@ if run_btn:
         sql = vertex_agent.prompt_to_sql(prompt)
         st.session_state.last_sql = sql
 
-        st.code(sql, language="sql", wrap_lines=True)
+        st.code(sql, language="sql")
 
         with st.spinner("📡 Running SQL in BigQuery..."):
             df = bq_agent.execute(sql)
@@ -131,7 +131,7 @@ if st.session_state.conversation_mode and not st.session_state.df.empty:
             sql = vertex_agent.prompt_to_sql(full_prompt)
             st.session_state.last_sql = sql
 
-            st.code(sql, language="sql", wrap_lines=True)
+            st.code(sql, language="sql")
 
             with st.spinner("📡 Running refined SQL in BigQuery..."):
                 df = bq_agent.execute(sql)
